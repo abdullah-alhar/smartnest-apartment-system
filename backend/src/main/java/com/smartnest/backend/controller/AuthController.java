@@ -3,8 +3,9 @@ package com.smartnest.backend.controller;
 import com.smartnest.backend.dto.AuthResponse;
 import com.smartnest.backend.dto.LoginRequest;
 import com.smartnest.backend.dto.RegisterRequest;
+import com.smartnest.backend.model.Address;
 import com.smartnest.backend.model.Role;
-import com.smartnest.backend.model.User;
+import com.smartnest.backend.model.Customer;
 import com.smartnest.backend.security.JwtUtil;
 import com.smartnest.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -24,17 +25,25 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        User user = new User();
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
-        user.setContactNumber(request.getContactNumber());
-        user.setRole(Role.CUSTOMER);
+        Customer customer= new Customer();
+        customer.setFirstName(request.getFirstName());
+        customer.setLastName(request.getLastName());
+        customer.setEmail(request.getEmail());
+        customer.setPassword(request.getPassword());
+        customer.setContactNumber(request.getContactNumber());
+        customer.setNic(request.getNic());
 
-        userService.registerUser(user);
+        customer.setRole(Role.CUSTOMER);
 
-        String token = jwtUtil.generateToken(user.getEmail());
+        Address address = new Address();
+        address.setCity(request.getCity());
+        address.setStreet(request.getStreet());
+        address.setPostalCode(request.getPostalCode());
+        customer.setAddress(address);
+
+        userService.registerUser(customer);
+
+        String token = jwtUtil.generateToken(customer.getEmail());
         return ResponseEntity.ok(new AuthResponse(token));
     }
 

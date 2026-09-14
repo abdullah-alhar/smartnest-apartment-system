@@ -1,10 +1,13 @@
-POST http://localhost:8080/api/auth/register
+POST http://localhost:8080/api/admin/create-staff
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBzbWFydG5lc3QuY29tIiwiaWF0IjoxNzg5MzUxNjM2LCJleHAiOjE3ODk0MzgwMzZ9.Zg5rY26l84LQK-tUc2LSuwrRrwm8Nn5GtF75TnWRjVw
 
 {
-  "firstName": "Abdullah",
-  "lastName": "Alhar",
-  "email": "a@gmail.com",
-  "password": "test1234",
-  "contactNumber": "0740670876"
+  "firstName": "Nadeesha",
+  "lastName": "Perera",
+  "email": "nadeesha.cro@smartnest.com",
+  "password": "cro12345",
+  "contactNumber": "0771234567",
+  "role": "CRO",
+  "department": "Customer Relations"
 }
