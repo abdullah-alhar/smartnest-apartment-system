@@ -6,12 +6,16 @@ import com.smartnest.backend.dto.RegisterRequest;
 import com.smartnest.backend.model.Address;
 import com.smartnest.backend.model.Role;
 import com.smartnest.backend.model.Customer;
+import com.smartnest.backend.model.User;
+import com.smartnest.backend.repository.UserRepository;
 import com.smartnest.backend.security.JwtUtil;
 import com.smartnest.backend.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,17 +26,18 @@ public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        Customer customer= new Customer();
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        Customer customer = new Customer();
         customer.setFirstName(request.getFirstName());
         customer.setLastName(request.getLastName());
         customer.setEmail(request.getEmail());
         customer.setPassword(request.getPassword());
         customer.setContactNumber(request.getContactNumber());
-        customer.setNic(request.getNic());
-
+        // uppercase so the trailing V/X letter is stored consistently either way it was typed
+        customer.setNic(request.getNic().toUpperCase());
         customer.setRole(Role.CUSTOMER);
 
         Address address = new Address();
@@ -41,10 +46,10 @@ public class AuthController {
         address.setPostalCode(request.getPostalCode());
         customer.setAddress(address);
 
-        userService.registerUser(customer);
+        User saved = userService.registerUser(customer);
 
-        String token = jwtUtil.generateToken(customer.getEmail());
-        return ResponseEntity.ok(new AuthResponse(token));
+        String token = jwtUtil.generateToken(saved.getEmail());
+        return ResponseEntity.ok(new AuthResponse(token, saved.getUserId(), saved.getRole(), saved.getFirstName(), saved.getLastName()));
     }
 
     @PostMapping("/login")
@@ -53,7 +58,10 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        String token = jwtUtil.generateToken(request.getEmail());
-        return ResponseEntity.ok(new AuthResponse(token));
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        String token = jwtUtil.generateToken(user.getEmail());
+        return ResponseEntity.ok(new AuthResponse(token, user.getUserId(), user.getRole(), user.getFirstName(), user.getLastName()));
     }
 }
