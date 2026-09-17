@@ -1,35 +1,57 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import Navbar from "./components/Navbar";
-import Register from "./pages/Register";
-import Login from "./pages/Login";
-import CreatePromotion from "./pages/CreatePromotion";
-import MyPromotions from "./pages/MyPromotions";
-import PendingApprovals from "./pages/PendingApprovals";
+import { ToastProvider } from "./context/ToastContext";
+import { ModalProvider } from "./context/ModalContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import TopNavbar from "./components/TopNavbar";
+import GlobalModals from "./components/GlobalModals";
+
+import Home             from "./pages/Home";
+import Login            from "./pages/Login";
+import Register         from "./pages/Register";
 import ActivePromotions from "./pages/ActivePromotions";
-import "./index.css";
+import Users            from "./pages/Users";
+import Profile          from "./pages/Profile";
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Navbar />
-        <Routes>
-          {/* Public */}
-          <Route path="/register"              element={<Register />} />
-          <Route path="/login"                 element={<Login />} />
-          <Route path="/promotions"            element={<ActivePromotions />} />
+      <ToastProvider>
+        <ModalProvider>
+          <BrowserRouter>
+            <div className="app-shell">
+              <TopNavbar />
+              <main className="app-main">
+                <Routes>
+                  {/* ── Public — Home renders per role; promotions is the one consolidated page ── */}
+                  <Route path="/"            element={<Home />} />
+                  <Route path="/login"       element={<Login />} />
+                  <Route path="/register"    element={<Register />} />
+                  <Route path="/promotions"  element={<ActivePromotions />} />
 
-          {/* Authenticated */}
-          <Route path="/promotions/create"     element={<CreatePromotion />} />
-          <Route path="/promotions/mine"       element={<MyPromotions />} />
-          <Route path="/promotions/pending"    element={<PendingApprovals />} />
+                  {/* ── Any authenticated user ── */}
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } />
 
-          {/* Default redirect */}
-          <Route path="/"                      element={<Navigate to="/promotions" replace />} />
-          <Route path="*"                      element={<Navigate to="/promotions" replace />} />
-        </Routes>
-      </BrowserRouter>
+                  {/* ── Admin only ── */}
+                  <Route path="/users" element={
+                    <ProtectedRoute allowedRoles={["ADMIN"]}>
+                      <Users />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* ── Fallback — also catches old bookmarked routes (/dashboard, /my-promotions, etc.) ── */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </main>
+              <GlobalModals />
+            </div>
+          </BrowserRouter>
+        </ModalProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

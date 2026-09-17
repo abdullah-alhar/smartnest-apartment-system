@@ -3,13 +3,20 @@ package com.smartnest.backend.service;
 import com.smartnest.backend.dto.CreatePromotionRequest;
 import com.smartnest.backend.model.Promotion;
 import com.smartnest.backend.model.PromotionStatus;
+import com.smartnest.backend.model.User;
 import com.smartnest.backend.repository.PromotionRepository;
+import com.smartnest.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,10 +25,13 @@ public class PromotionService {
     private static final int TITLE_MAX_LENGTH = 255;
     private static final int DISCOUNT_DETAILS_MAX_LENGTH = 1000;
     private static final int MAX_DURATION_YEARS = 2;
+    private static final int MAX_DISCOUNT_PERCENTAGE = 100;
 
     private final PromotionRepository promotionRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    public Promotion createPromotion(CreatePromotionRequest request) {
+    public Promotion createPromotion(CreatePromotionRequest request, Long actorId) {
         validate(request);
 
         Promotion promotion = new Promotion();
@@ -34,7 +44,9 @@ public class PromotionService {
         promotion.setEndDate(request.getEndDate());
         promotion.setFeatured(request.isFeatured());
         promotion.setStatus(PromotionStatus.PENDING);
-        return promotionRepository.save(promotion);
+        Promotion saved = promotionRepository.save(promotion);
+        notificationService.promotionSubmitted(saved, actorId, false);
+        return withCreatorName(saved);
     }
 
     // frontend checks these too, but never trust the client alone
@@ -59,8 +71,8 @@ public class PromotionService {
                 || request.getDiscountPercentage().compareTo(java.math.BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Discount percentage must be greater than 0");
         }
-        if (request.getDiscountPercentage().compareTo(java.math.BigDecimal.valueOf(100)) > 0) {
-            throw new IllegalArgumentException("Discount percentage cannot exceed 100");
+        if (request.getDiscountPercentage().compareTo(java.math.BigDecimal.valueOf(MAX_DISCOUNT_PERCENTAGE)) > 0) {
+            throw new IllegalArgumentException("Discount percentage cannot exceed " + MAX_DISCOUNT_PERCENTAGE + "%");
         }
         if (request.getStartDate() == null) {
             throw new IllegalArgumentException("Start date is required");
@@ -79,15 +91,19 @@ public class PromotionService {
         }
     }
 
-    public Promotion approvePromotion(Long promotionId, Long operationsManagerId) {
+    public Promotion approvePromotion(Long promotionId, Long operationsManagerId, Long actorId) {
         Promotion promotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new IllegalArgumentException("Promotion not found: " + promotionId));
         promotion.setStatus(PromotionStatus.APPROVED);
         promotion.setReviewedByManagerId(operationsManagerId);
-        return promotionRepository.save(promotion);
+        promotion.setRejectionReason(null);
+        promotion.setReviewedAt(LocalDateTime.now());
+        Promotion saved = promotionRepository.save(promotion);
+        notificationService.promotionApproved(saved, actorId);
+        return withCreatorName(saved);
     }
 
-    public Promotion rejectPromotion(Long promotionId, Long operationsManagerId, String reason) {
+    public Promotion rejectPromotion(Long promotionId, Long operationsManagerId, String reason, Long actorId) {
         if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("A rejection reason is required");
         }
@@ -96,19 +112,22 @@ public class PromotionService {
         promotion.setStatus(PromotionStatus.REJECTED);
         promotion.setReviewedByManagerId(operationsManagerId);
         promotion.setRejectionReason(reason);
-        return promotionRepository.save(promotion);
+        promotion.setReviewedAt(LocalDateTime.now());
+        Promotion saved = promotionRepository.save(promotion);
+        notificationService.promotionRejected(saved, actorId);
+        return withCreatorName(saved);
     }
 
     public List<Promotion> getActivePromotions() {
-        return promotionRepository.findByStatus(PromotionStatus.APPROVED);
+        return withCreatorNames(promotionRepository.findByStatus(PromotionStatus.APPROVED));
     }
 
     public List<Promotion> getPendingPromotions() {
-        return promotionRepository.findByStatus(PromotionStatus.PENDING);
+        return withCreatorNames(promotionRepository.findByStatus(PromotionStatus.PENDING));
     }
 
     public List<Promotion> getMyPromotions(Long salesStaffId) {
-        return promotionRepository.findBySalesStaffId(salesStaffId);
+        return withCreatorNames(promotionRepository.findBySalesStaffId(salesStaffId));
     }
 
     public void deletePromotion(Long promotionId, Long callerId, boolean isAdmin) {
@@ -139,6 +158,26 @@ public class PromotionService {
         promotion.setStatus(PromotionStatus.PENDING);
         promotion.setRejectionReason(null);
         promotion.setReviewedByManagerId(null);
-        return promotionRepository.save(promotion);
+        promotion.setReviewedAt(null);
+        Promotion saved = promotionRepository.save(promotion);
+        notificationService.promotionSubmitted(saved, callerId, true);
+        return withCreatorName(saved);
+    }
+
+    private Promotion withCreatorName(Promotion promotion) {
+        return withCreatorNames(List.of(promotion)).get(0);
+    }
+
+    // one query for every creator in the list, rather than one per promotion
+    private List<Promotion> withCreatorNames(List<Promotion> promotions) {
+        List<Long> ids = promotions.stream()
+                .map(Promotion::getSalesStaffId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, User> users = userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getUserId, Function.identity()));
+        for (Promotion p : promotions) {
+            User u = users.get(p.getSalesStaffId());
+            p.setCreatorName(u == null ? null : (u.getFirstName() + " " + u.getLastName()).trim());
+        }
+        return promotions;
     }
 }

@@ -24,17 +24,18 @@ public class PromotionController {
     private final UserService userService;
 
     @PostMapping
-    @PreAuthorize("hasRole('SALES_STAFF') or hasRole('ADMIN')")
-    public ResponseEntity<Promotion> createPromotion(@RequestBody CreatePromotionRequest request) {
-        return ResponseEntity.ok(promotionService.createPromotion(request));
+    @PreAuthorize("hasRole('SALES_STAFF') or hasRole('OPERATIONS_MANAGER') or hasRole('ADMIN')")
+    public ResponseEntity<Promotion> createPromotion(@RequestBody CreatePromotionRequest request, Authentication authentication) {
+        return ResponseEntity.ok(promotionService.createPromotion(request, callerId(authentication)));
     }
 
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasRole('OPERATIONS_MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<Promotion> approvePromotion(
             @PathVariable Long id,
-            @RequestParam Long operationsManagerId) {
-        return ResponseEntity.ok(promotionService.approvePromotion(id, operationsManagerId));
+            @RequestParam Long operationsManagerId,
+            Authentication authentication) {
+        return ResponseEntity.ok(promotionService.approvePromotion(id, operationsManagerId, callerId(authentication)));
     }
 
     @PutMapping("/{id}/reject")
@@ -42,8 +43,13 @@ public class PromotionController {
     public ResponseEntity<Promotion> rejectPromotion(
             @PathVariable Long id,
             @RequestParam Long operationsManagerId,
-            @RequestParam String reason) {
-        return ResponseEntity.ok(promotionService.rejectPromotion(id, operationsManagerId, reason));
+            @RequestParam String reason,
+            Authentication authentication) {
+        return ResponseEntity.ok(promotionService.rejectPromotion(id, operationsManagerId, reason, callerId(authentication)));
+    }
+
+    private Long callerId(Authentication authentication) {
+        return userService.getByEmail(authentication.getName()).getUserId();
     }
 
     // public, no auth needed — returns only APPROVED promotions
@@ -59,7 +65,7 @@ public class PromotionController {
     }
 
     @GetMapping("/my/{salesStaffId}")
-    @PreAuthorize("hasRole('SALES_STAFF') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SALES_STAFF') or hasRole('OPERATIONS_MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<List<Promotion>> getMyPromotions(@PathVariable Long salesStaffId, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
@@ -74,7 +80,7 @@ public class PromotionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('SALES_STAFF') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SALES_STAFF') or hasRole('OPERATIONS_MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<Promotion> updatePromotion(
             @PathVariable Long id,
             @RequestBody CreatePromotionRequest request,
@@ -86,7 +92,7 @@ public class PromotionController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SALES_STAFF') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SALES_STAFF') or hasRole('OPERATIONS_MANAGER') or hasRole('ADMIN')")
     public ResponseEntity<Void> deletePromotion(@PathVariable Long id, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));

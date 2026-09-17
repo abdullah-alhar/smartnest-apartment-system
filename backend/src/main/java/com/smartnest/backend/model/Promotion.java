@@ -10,6 +10,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "promotions")
@@ -66,4 +67,11 @@ public class Promotion {
 
     // The OperationsManager who approved or rejected
     private Long reviewedByManagerId;
+
+    // when the approve/reject decision was made — cleared again on resubmission
+    private LocalDateTime reviewedAt;
+
+    // not stored — filled in by PromotionService for list responses so the UI can show "Submitted by"
+    @Transient
+    private String creatorName;
 }
