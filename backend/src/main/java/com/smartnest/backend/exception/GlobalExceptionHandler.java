@@ -10,14 +10,15 @@ import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
 
-// without this, errors fall through to Spring's default page with no usable message for the frontend to show
+// without this, any uncaught exception falls through to the servlet container's default /error dispatch,
+// which isn't permitAll'd in SecurityConfig — Spring Security then blocks THAT forward too, masking every
+// real error (400s, 404s, 500s) behind a blank, misleading 403
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -35,17 +36,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body(message));
     }
 
-    @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<Map<String, String>> handleMissingParam(MissingServletRequestParameterException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(body(ex.getParameterName() + " is required"));
-    }
-
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleDataIntegrity(DataIntegrityViolationException ex) {
-        // covers unique-constraint hits (NIC, etc.) that slip past our own checks — don't leak raw SQL to the client
+        // covers unique-constraint hits (duplicate email/NIC, etc.) that slip past application-level checks
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(body("This information conflicts with an existing record (e.g. a duplicate NIC or other unique value)."));
+                .body(body("This information conflicts with an existing record (e.g. a duplicate email or NIC)."));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -58,15 +53,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body("Invalid email or password."));
     }
 
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body("Invalid email or password."));
+    }
+
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity<Map<String, String>> handleDisabled(DisabledException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(body("This account has been deactivated. Contact an administrator."));
-    }
-
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body("Invalid email or password."));
     }
 
     @ExceptionHandler(AuthenticationException.class)
@@ -76,7 +71,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body("You do not have permission to perform this action."));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

@@ -33,6 +33,7 @@ public class AuthController {
         customer.setEmail(request.getEmail());
         customer.setPassword(request.getPassword());
         customer.setContactNumber(request.getContactNumber());
+        // uppercase so the trailing V/X letter is stored consistently either way it was typed
         customer.setNic(request.getNic().toUpperCase());
         customer.setRole(Role.CUSTOMER);
 

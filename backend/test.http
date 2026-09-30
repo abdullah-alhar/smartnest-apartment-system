@@ -2,12 +2,14 @@ POST http://localhost:8080/api/admin/create-staff
 Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBzbWFydG5lc3QuY29tIiwiaWF0IjoxNzg5MzUxNjM2LCJleHAiOjE3ODk0MzgwMzZ9.Zg5rY26l84LQK-tUc2LSuwrRrwm8Nn5GtF75TnWRjVw
 
+
 {
-  "firstName": "Nadeesha",
-  "lastName": "Perera",
-  "email": "nadeesha.cro@smartnest.com",
-  "password": "cro12345",
-  "contactNumber": "0771234567",
-  "role": "CRO",
-  "department": "Customer Relations"
+"apartmentId": 1,
+"salesStaffId": 2,
+"title": "New Year Offer",
+"discountDetails": "10% off booking fee",
+"discountPercentage": 10,
+"startDate": "2026-01-01",
+"endDate": "2026-01-31",
+"isFeatured": true
 }

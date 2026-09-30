@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import TopNavbar from "./components/TopNavbar";
 import GlobalModals from "./components/GlobalModals";
 
+import Home             from "./pages/Home";
 import Login            from "./pages/Login";
 import Register         from "./pages/Register";
 import ActivePromotions from "./pages/ActivePromotions";
@@ -22,7 +23,8 @@ function App() {
               <TopNavbar />
               <main className="app-main">
                 <Routes>
-                  {/* ── Public — also the one consolidated promotions page for every role ── */}
+                  {/* ── Public — Home renders per role; promotions is the one consolidated page ── */}
+                  <Route path="/"            element={<Home />} />
                   <Route path="/login"       element={<Login />} />
                   <Route path="/register"    element={<Register />} />
                   <Route path="/promotions"  element={<ActivePromotions />} />
@@ -42,7 +44,7 @@ function App() {
                   } />
 
                   {/* ── Fallback — also catches old bookmarked routes (/dashboard, /my-promotions, etc.) ── */}
-                  <Route path="*" element={<Navigate to="/promotions" replace />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </main>
               <GlobalModals />

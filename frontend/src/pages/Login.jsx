@@ -26,7 +26,7 @@ function Login() {
       // data: { token, userId, role, firstName, lastName }
       login(data.token, data.userId, data.role, data.firstName, data.lastName);
       toast.success("Welcome back! Redirecting…");
-      setTimeout(() => navigate("/promotions"), 700);
+      setTimeout(() => navigate("/"), 700);
     } catch (err) {
       toast.error(extractErrorMessage(err, "Invalid email or password."));
       setLoading(false);

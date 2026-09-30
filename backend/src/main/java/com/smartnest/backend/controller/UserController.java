@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+// always resolve the target user from the JWT, never a client-supplied id — can't touch someone else's account
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor

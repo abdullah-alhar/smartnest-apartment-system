@@ -65,7 +65,7 @@ function Register() {
       // Customers register → CUSTOMER role → go to /promotions
       login(data.token, data.userId, data.role ?? "CUSTOMER", data.firstName, data.lastName);
       toast.success("Account created! Redirecting…");
-      setTimeout(() => navigate("/promotions"), 700);
+      setTimeout(() => navigate("/"), 700);
     } catch (err) {
       toast.error(extractErrorMessage(err, "Registration failed. Please check your details."));
       setLoading(false);

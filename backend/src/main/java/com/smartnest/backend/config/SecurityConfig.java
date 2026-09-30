@@ -43,8 +43,8 @@ public class SecurityConfig {
                         // GET /api/promotions (approved list) is fully public
                         .requestMatchers(HttpMethod.GET, "/api/promotions").permitAll()
 
-                        // Only SALES_STAFF / ADMIN may POST a promotion
-                        .requestMatchers(HttpMethod.POST, "/api/promotions").hasAnyRole("SALES_STAFF", "ADMIN")
+                        // SALES_STAFF / OPERATIONS_MANAGER / ADMIN may all create promotions
+                        .requestMatchers(HttpMethod.POST, "/api/promotions").hasAnyRole("SALES_STAFF", "OPERATIONS_MANAGER", "ADMIN")
 
                         // Approve/reject endpoints — OPERATIONS_MANAGER, ADMIN (Admin is a super-role)
                         .requestMatchers("/api/promotions/*/approve").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
