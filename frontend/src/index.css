@@ -1,8 +1,4 @@
-/* ============================================================
-   SmartNest — Global Design System
-   Tokens follow CLADUE DESIGN/DESIGN.md (warm neutrals + one terracotta accent)
-   Inter + Fraunces (hero H1 only) loaded via index.html
-   ============================================================ */
+
 
 /* ── Reset ─────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -47,7 +43,7 @@ html { scroll-behavior: smooth; }
   --radius-xl:  16px;
   --radius-full: 9999px;
 
-  /* DESIGN.md defines exactly two shadows: level 1 (raised) and level 2 (overlay) */
+
   --shadow-xs: 0 1px 3px rgba(28,25,23,0.06), 0 1px 2px rgba(28,25,23,0.04);
   --shadow-sm: 0 1px 3px rgba(28,25,23,0.06), 0 1px 2px rgba(28,25,23,0.04);
   --shadow-md: 0 8px 24px rgba(28,25,23,0.12);

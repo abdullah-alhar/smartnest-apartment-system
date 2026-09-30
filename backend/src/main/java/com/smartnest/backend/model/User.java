@@ -14,7 +14,7 @@ import lombok.AllArgsConstructor;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @NextId
     private Long userId;
 
     private String firstName;
