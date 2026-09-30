@@ -7,7 +7,6 @@ import com.smartnest.backend.model.Address;
 import com.smartnest.backend.model.Role;
 import com.smartnest.backend.model.Customer;
 import com.smartnest.backend.model.User;
-import com.smartnest.backend.repository.UserRepository;
 import com.smartnest.backend.security.JwtUtil;
 import com.smartnest.backend.service.UserService;
 import jakarta.validation.Valid;
@@ -15,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,7 +24,6 @@ public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
-    private final UserRepository userRepository;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -36,7 +33,6 @@ public class AuthController {
         customer.setEmail(request.getEmail());
         customer.setPassword(request.getPassword());
         customer.setContactNumber(request.getContactNumber());
-        // uppercase so the trailing V/X letter is stored consistently either way it was typed
         customer.setNic(request.getNic().toUpperCase());
         customer.setRole(Role.CUSTOMER);
 
@@ -58,9 +54,7 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
+        User user = userService.getByEmail(request.getEmail());
         String token = jwtUtil.generateToken(user.getEmail());
         return ResponseEntity.ok(new AuthResponse(token, user.getUserId(), user.getRole(), user.getFirstName(), user.getLastName()));
     }

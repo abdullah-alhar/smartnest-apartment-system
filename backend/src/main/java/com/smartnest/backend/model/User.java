@@ -14,7 +14,7 @@ import lombok.AllArgsConstructor;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @NextId
     private Long userId;
 
     private String firstName;
@@ -31,8 +31,6 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    // nullable on purpose — ddl-auto=update adds this as a nullable column on existing rows;
-    // null is treated as active everywhere it's read, so old rows aren't accidentally locked out
     private Boolean isActive = true;
 
     public boolean isActiveOrDefault() {

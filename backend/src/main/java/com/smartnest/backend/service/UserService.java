@@ -21,6 +21,11 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+    }
+
     public User registerUser(User user) {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new IllegalArgumentException("Email already registered");
@@ -38,12 +43,6 @@ public class UserService {
         }
         staff.setPassword(passwordEncoder.encode(staff.getPassword()));
         return userRepository.save(staff);
-    }
-
-    // always look up by the JWT's own email, never a client-supplied id
-    public User getByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
     }
 
     public User updateProfile(String email, UpdateProfileRequest request) {
@@ -69,7 +68,6 @@ public class UserService {
         userRepository.save(user);
     }
 
-    // base User table already carries role + isActive for every subtype, so one query covers staff and customers alike
     public List<UserSummaryResponse> listAllUsers() {
         return userRepository.findAll().stream().map(UserSummaryResponse::from).toList();
     }
@@ -78,7 +76,6 @@ public class UserService {
         User target = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUserId));
 
-        // an admin locking their own account out would need another admin to undo it — block it outright
         if (!active) {
             User requester = getByEmail(requestingAdminEmail);
             if (requester.getUserId().equals(targetUserId)) {
