@@ -35,7 +35,6 @@ public class RegisterRequest {
     @NotBlank(message = "Street address is required")
     private String street;
 
-    // old format: 9 digits + V/X (e.g. 851234567V), new format: 12 digits, no letter
     @NotBlank(message = "NIC is required")
     @Pattern(
             regexp = "^([0-9]{9}[vVxX]|[0-9]{12})$",

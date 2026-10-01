@@ -24,7 +24,6 @@ public class CreateStaffRequest {
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
-    // optional — an admin may not have the new hire's number yet
     private String contactNumber;
 
     @NotNull(message = "Role is required")

@@ -22,7 +22,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
 
-        // a null role (old seed data) would otherwise NPE into a confusing 403
         if (user.getRole() == null) {
             throw new UsernameNotFoundException(
                 "User '" + email + "' has no role assigned. "
@@ -34,7 +33,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .username(user.getEmail())
                 .password(user.getPassword())
                 .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
-                // Spring Security's own pre-auth check throws DisabledException for this at login
                 .disabled(!user.isActiveOrDefault())
                 .build();
     }
