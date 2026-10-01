@@ -6,7 +6,6 @@ const authHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });
 
-// department is left out of the payload on purpose — backend just saves it as null
 export const createStaff = async (staffData) => {
   const response = await axios.post(
     `${ADMIN_BASE}/create-staff`,

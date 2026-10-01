@@ -9,7 +9,6 @@ export function AuthProvider({ children }) {
   const [firstName, setFirstName] = useState(localStorage.getItem("firstName") || "");
   const [lastName,  setLastName]  = useState(localStorage.getItem("lastName")  || "");
 
-  // call after a successful login/register response
   const login = (newToken, newUserId, newRole, newFirstName = "", newLastName = "") => {
     localStorage.setItem("token",     newToken);
     localStorage.setItem("userId",    newUserId);
@@ -23,7 +22,6 @@ export function AuthProvider({ children }) {
     setLastName(newLastName);
   };
 
-  // Profile.jsx already lets a user edit their own name — keep the navbar in sync without a re-login
   const updateName = (newFirstName, newLastName) => {
     localStorage.setItem("firstName", newFirstName);
     localStorage.setItem("lastName",  newLastName);
