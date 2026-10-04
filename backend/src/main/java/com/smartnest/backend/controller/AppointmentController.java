@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+// Appointment endpoints: customers book/cancel viewings, CRO approves, reschedules, declines or completes them
 @RestController
 @RequestMapping("/api/appointments")
 @RequiredArgsConstructor
