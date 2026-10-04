@@ -1,30 +1,22 @@
-import { useState, useEffect, useMemo } from "react";
-import { Search, Users as UsersIcon, UserX, UserCheck, UserPlus, Loader2 } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Search, Users as UsersIcon, UserX, UserCheck, UserPlus } from "lucide-react";
 import { listAllUsers, deactivateUser, reactivateUser } from "../api/adminApi";
 import { useAuth } from "../context/AuthContext";
 import { useModal } from "../context/ModalContext";
 import { useToast } from "../context/ToastContext";
 import { extractErrorMessage } from "../utils/errors";
-import StatusBadge from "../components/StatusBadge";
+import { ROLE_LABEL, initialsOf } from "../utils/roles";
 import EmptyState from "../components/EmptyState";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { SkeletonTableRows } from "../components/Skeleton";
-
-const ROLE_LABEL = {
-  ADMIN: "Administrator",
-  SALES_STAFF: "Sales Staff",
-  CRO: "Chief Revenue Officer",
-  OPERATIONS_MANAGER: "Operations Manager",
-  MANAGING_DIRECTOR: "Managing Director",
-  MARKETING_EXECUTIVE: "Marketing Executive",
-  CUSTOMER: "Customer",
-};
+import { Alert, Badge, Button, Card, FilterTabs, PageHeader, Table } from "../components/ui";
+import { fieldCls, tdCls } from "../components/styles";
 
 const ROLE_FILTERS = ["ALL", "ADMIN", "SALES_STAFF", "CRO", "OPERATIONS_MANAGER", "MARKETING_EXECUTIVE", "CUSTOMER"];
 
 function Users() {
   const { userId } = useAuth();
-  const { openModal } = useModal();
+  const { openModal, activeModal } = useModal();
   const toast = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +31,7 @@ function Users() {
     try {
       const data = await listAllUsers();
       setUsers(Array.isArray(data) ? data : []);
+      setError("");
     } catch {
       setError("Could not load users.");
     } finally {
@@ -48,13 +41,24 @@ function Users() {
 
   useEffect(() => { load(); }, []);
 
+  // Refresh after the "Create Staff" modal closes so the new account shows up.
+  const prevModalRef = useRef(activeModal);
+  useEffect(() => {
+    if (prevModalRef.current === "createStaff" && activeModal === null) load();
+    prevModalRef.current = activeModal;
+  }, [activeModal]);
+
+  const counts = useMemo(() => {
+    const c = { ALL: users.length };
+    users.forEach((u) => { c[u.role] = (c[u.role] ?? 0) + 1; });
+    return c;
+  }, [users]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return users.filter((u) => {
       const matchesRole = roleFilter === "ALL" || u.role === roleFilter;
-      const matchesSearch = !q
-        || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q)
-        || u.email.toLowerCase().includes(q);
+      const matchesSearch = !q || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
       return matchesRole && matchesSearch;
     });
   }, [users, search, roleFilter]);
@@ -64,7 +68,7 @@ function Users() {
     try {
       await reactivateUser(row.userId);
       toast.success(`${row.firstName} ${row.lastName} reactivated.`);
-      setUsers((s) => s.map((x) => x.userId === row.userId ? { ...x, active: true } : x));
+      setUsers((s) => s.map((x) => (x.userId === row.userId ? { ...x, active: true } : x)));
     } catch (err) {
       toast.error(extractErrorMessage(err, "Failed to reactivate account."));
     } finally {
@@ -77,7 +81,7 @@ function Users() {
     try {
       await deactivateUser(confirmTarget.userId);
       toast.success(`${confirmTarget.firstName} ${confirmTarget.lastName} deactivated.`);
-      setUsers((s) => s.map((x) => x.userId === confirmTarget.userId ? { ...x, active: false } : x));
+      setUsers((s) => s.map((x) => (x.userId === confirmTarget.userId ? { ...x, active: false } : x)));
       setConfirmTarget(null);
     } catch (err) {
       toast.error(extractErrorMessage(err, "Failed to deactivate account."));
@@ -87,102 +91,64 @@ function Users() {
   };
 
   return (
-    <div className="page-wrapper">
-      <div className="page-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-        <div>
-          <h1 className="page-title">Users</h1>
-          <p className="page-subtitle">View and manage every account in the system — staff and customers alike.</p>
+    <div>
+      <PageHeader title="Users & Roles" subtitle="Every account in the system — staff and customers alike."
+        actions={<Button icon={UserPlus} onClick={() => openModal("createStaff")}>Create Staff</Button>} />
+
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="relative max-w-sm">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-grey-400 pointer-events-none" />
+          <input className={fieldCls(false, "pl-10")} placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => openModal("createStaff")}>
-          <UserPlus size={15} /> Create Staff
-        </button>
+        <FilterTabs options={ROLE_FILTERS.map((r) => ({ value: r, label: r === "ALL" ? "All" : ROLE_LABEL[r] }))}
+          value={roleFilter} onChange={setRoleFilter} counts={counts} />
       </div>
 
-      <div className="flex gap-3 mb-6" style={{ flexWrap: "wrap", alignItems: "center" }}>
-        <div className="input-icon-wrap" style={{ flex: 1, minWidth: 220, maxWidth: 360 }}>
-          <Search size={15} className="input-icon" />
-          <input
-            className="form-input has-icon"
-            placeholder="Search by name or email…"
-            value={search} onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="role-filter-tabs">
-          {ROLE_FILTERS.map((r) => (
-            <button
-              key={r} type="button"
-              className={`role-filter-tab ${roleFilter === r ? "active" : ""}`}
-              onClick={() => setRoleFilter(r)}
-            >
-              {r === "ALL" ? "All" : ROLE_LABEL[r]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {error && <div className="alert alert-error mb-6">{error}</div>}
+      {error && <Alert className="mb-6">{error}</Alert>}
 
       {!loading && filtered.length === 0 && !error && (
-        <EmptyState icon={UsersIcon} title="No Users Found" description="Try a different search or role filter." />
+        <Card><EmptyState icon={UsersIcon} title="No users found" description="Try a different search or role filter." /></Card>
       )}
 
       {(loading || filtered.length > 0) && !error && (
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+        <Table head={["Name", "Email", "Role", "Status", { label: "Actions", right: true }]}>
+          {loading && <SkeletonTableRows columns={5} rows={5} />}
+          {!loading && filtered.map((row) => {
+            const isSelf = String(row.userId) === String(userId);
+            return (
+              <tr key={row.userId} className="hover:bg-off-white/60">
+                <td className={tdCls}>
+                  <div className="flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-xl bg-accent/15 text-accent-dark text-xs font-bold flex items-center justify-center flex-shrink-0">
+                      {initialsOf(row.firstName, row.lastName)}
+                    </span>
+                    <span className="font-medium text-primary whitespace-nowrap">{row.firstName} {row.lastName}{isSelf && <span className="text-grey-400 font-normal"> (you)</span>}</span>
+                  </div>
+                </td>
+                <td className={`${tdCls} text-grey-500`}>{row.email}</td>
+                <td className={`${tdCls} text-grey-600 whitespace-nowrap`}>{ROLE_LABEL[row.role] ?? row.role}</td>
+                <td className={tdCls}><Badge status={row.active ? "ACTIVE" : "INACTIVE"} /></td>
+                <td className={`${tdCls} text-right`}>
+                  {row.active ? (
+                    <Button size="sm" variant="danger-ghost" icon={UserX} disabled={isSelf || actionLoading}
+                      title={isSelf ? "You cannot deactivate your own account" : undefined} onClick={() => setConfirmTarget(row)}>
+                      Deactivate
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="success" icon={UserCheck} disabled={actionLoading} onClick={() => handleReactivate(row)}>Reactivate</Button>
+                  )}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading && <SkeletonTableRows columns={5} rows={5} />}
-              {!loading && filtered.map((row) => {
-                const isSelf = String(row.userId) === String(userId);
-                return (
-                  <tr key={row.userId}>
-                    <td className="cell-title">{row.firstName} {row.lastName}</td>
-                    <td className="cell-muted">{row.email}</td>
-                    <td>{ROLE_LABEL[row.role] ?? row.role}</td>
-                    <td><StatusBadge status={row.active ? "ACTIVE" : "INACTIVE"} /></td>
-                    <td>
-                      <div className="cell-actions">
-                        {row.active ? (
-                          <button
-                            className="btn btn-danger btn-sm"
-                            disabled={isSelf || actionLoading}
-                            title={isSelf ? "You cannot deactivate your own account" : undefined}
-                            onClick={() => setConfirmTarget(row)}
-                          >
-                            <UserX size={14} /> Deactivate
-                          </button>
-                        ) : (
-                          <button
-                            className="btn btn-success btn-sm"
-                            disabled={actionLoading}
-                            onClick={() => handleReactivate(row)}
-                          >
-                            <UserCheck size={14} /> Reactivate
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+            );
+          })}
+        </Table>
       )}
 
       <ConfirmDialog
         open={!!confirmTarget}
         title="Deactivate Account"
-        description={confirmTarget ? `Are you sure you want to deactivate ${confirmTarget.firstName} ${confirmTarget.lastName}'s account? They will no longer be able to log in.` : ""}
-        confirmLabel={actionLoading ? <Loader2 size={15} className="icon-spin" /> : "Deactivate"}
+        description={confirmTarget ? `Are you sure you want to deactivate ${confirmTarget.firstName} ${confirmTarget.lastName}'s account? They will no longer be able to sign in.` : ""}
+        confirmLabel="Deactivate"
         loading={actionLoading}
         onConfirm={handleDeactivateConfirmed}
         onCancel={() => setConfirmTarget(null)}

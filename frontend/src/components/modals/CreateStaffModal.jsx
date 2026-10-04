@@ -1,30 +1,18 @@
 import { useState } from "react";
-import { User, Mail, Lock, Shield, Loader2, UserPlus, X } from "lucide-react";
+import { User, Mail, Lock, Shield, UserPlus } from "lucide-react";
 import { createStaff } from "../../api/adminApi";
 import { useToast } from "../../context/ToastContext";
 import { extractErrorMessage } from "../../utils/errors";
+import { ROLE_LABEL } from "../../utils/roles";
 import PhoneInput from "../PhoneInput";
+import { Button, Input, Modal, Select } from "../ui";
 
-// MANAGING_DIRECTOR and CUSTOMER left out on purpose — backend rejects both for this endpoint anyway
-const STAFF_ROLES = [
-  { value: "ADMIN",               label: "Administrator" },
-  { value: "SALES_STAFF",         label: "Sales Staff" },
-  { value: "CRO",                 label: "Chief Revenue Officer" },
-  { value: "OPERATIONS_MANAGER",  label: "Operations Manager" },
-  { value: "MARKETING_EXECUTIVE", label: "Marketing Executive" },
-];
+const STAFF_ROLES = ["ADMIN", "SALES_STAFF", "CRO", "OPERATIONS_MANAGER", "MARKETING_EXECUTIVE"];
 
 function CreateStaffModal({ onClose }) {
   const toast = useToast();
 
-  const [form, setForm] = useState({
-    firstName:     "",
-    lastName:      "",
-    email:         "",
-    password:      "",
-    contactNumber: "",
-    role:          "",
-  });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", contactNumber: "", role: "" });
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -41,9 +29,7 @@ function CreateStaffModal({ onClose }) {
   const validate = () => {
     const errors = {};
     const digits = form.contactNumber.replace(/^\+94/, "");
-    if (digits.length > 0 && digits.length !== 9) {
-      errors.contactNumber = "Enter exactly 9 digits after +94.";
-    }
+    if (digits.length > 0 && digits.length !== 9) errors.contactNumber = "Enter exactly 9 digits after +94.";
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -51,7 +37,6 @@ function CreateStaffModal({ onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-
     setLoading(true);
     try {
       await createStaff(form);
@@ -65,108 +50,30 @@ function CreateStaffModal({ onClose }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header-row">
-          <h2 className="modal-title">Create Staff Account</h2>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">
-            <X size={18} />
-          </button>
+    <Modal onClose={onClose} size="lg" icon={UserPlus} title="Create Staff Account" description="Give a new staff member a role and system access."
+      footer={(
+        <>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button id="cs-submit-btn" type="submit" form="staff-form" icon={UserPlus} loading={loading}>Create Staff Account</Button>
+        </>
+      )}>
+      <form id="staff-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input id="cs-firstName" label="First Name" icon={User} name="firstName" placeholder="John" value={form.firstName} onChange={handle} required autoFocus />
+          <Input id="cs-lastName" label="Last Name" name="lastName" placeholder="Doe" value={form.lastName} onChange={handle} required />
         </div>
-        <p className="modal-desc">Provision a new staff member with a specific role and system access.</p>
-
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="form-grid form-grid-2">
-            <div className="form-group">
-              <label className="form-label" htmlFor="cs-firstName">First Name</label>
-              <div className="input-icon-wrap">
-                <User size={16} className="input-icon" />
-                <input
-                  id="cs-firstName" className="form-input has-icon" name="firstName"
-                  placeholder="John" value={form.firstName} onChange={handle} required autoFocus
-                />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="cs-lastName">Last Name</label>
-              <input
-                id="cs-lastName" className="form-input" name="lastName"
-                placeholder="Doe" value={form.lastName} onChange={handle} required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="cs-email">Email Address</label>
-            <div className="input-icon-wrap">
-              <Mail size={16} className="input-icon" />
-              <input
-                id="cs-email" className="form-input has-icon" name="email" type="email"
-                placeholder="staff@smartnest.com" value={form.email} onChange={handle} required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="cs-password">Temporary Password</label>
-            <div className="input-icon-wrap">
-              <Lock size={16} className="input-icon" />
-              <input
-                id="cs-password" className="form-input has-icon" name="password" type="password"
-                placeholder="Set a strong temporary password" value={form.password} onChange={handle} required
-              />
-            </div>
-            <span className="form-hint">The staff member should change this on first login.</span>
-          </div>
-
-          <div className="form-grid form-grid-2">
-            <PhoneInput
-              id="cs-contact"
-              value={form.contactNumber}
-              onChange={handlePhoneChange}
-              error={fieldErrors.contactNumber}
-            />
-            <div className="form-group">
-              <label className="form-label" htmlFor="cs-role">Role</label>
-              <select
-                id="cs-role" className="form-select" name="role"
-                value={form.role} onChange={handle} required
-              >
-                <option value="" disabled>Select a role…</option>
-                {STAFF_ROLES.map(({ value, label }) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-              <span className="form-hint">Admins can assign any role including Admin.</span>
-            </div>
-          </div>
-
-          {form.role && (
-            <div className="flex items-center gap-2">
-              <span className="text-muted" style={{ fontSize: 13 }}>This account will have:</span>
-              <span className="dash-role-badge">
-                <Shield size={12} />
-                {STAFF_ROLES.find((r) => r.value === form.role)?.label ?? form.role}
-              </span>
-              <span className="text-muted" style={{ fontSize: 13 }}>access</span>
-            </div>
-          )}
-
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button
-              id="cs-submit-btn" type="submit"
-              className="btn btn-primary" disabled={loading}
-            >
-              {loading
-                ? <><Loader2 size={16} className="icon-spin" /> Creating Account…</>
-                : <><UserPlus size={16} /> Create Staff Account</>
-              }
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <Input id="cs-email" label="Email Address" icon={Mail} name="email" type="email" placeholder="staff@smartnest.com" value={form.email} onChange={handle} required />
+        <Input id="cs-password" label="Temporary Password" icon={Lock} name="password" type="password" placeholder="Set a strong temporary password"
+          value={form.password} onChange={handle} required hint="The staff member should change this on first sign-in." />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <PhoneInput id="cs-contact" value={form.contactNumber} onChange={handlePhoneChange} error={fieldErrors.contactNumber} />
+          <Select id="cs-role" label="Role" icon={Shield} name="role" value={form.role} onChange={handle} required hint="Admins can assign any role, including Admin.">
+            <option value="" disabled>Select a role…</option>
+            {STAFF_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+          </Select>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

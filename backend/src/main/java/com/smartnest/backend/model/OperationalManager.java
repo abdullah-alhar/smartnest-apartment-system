@@ -14,7 +14,3 @@ public class OperationalManager extends Staff {
     private Double ApprovalLimit;
 }
 
-
-
-
-

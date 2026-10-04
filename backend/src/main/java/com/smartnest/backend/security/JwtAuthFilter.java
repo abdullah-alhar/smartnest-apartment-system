@@ -38,14 +38,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(7);
 
-        // a bad/expired token throws here — treat that as just "not authenticated" instead of a raw 500
         try {
             String email = jwtUtil.extractEmail(token);
 
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                // re-checked on every request, not just login, so a deactivated account loses access immediately
                 if (jwtUtil.isTokenValid(token, email) && userDetails.isEnabled()) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
