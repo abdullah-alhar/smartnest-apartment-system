@@ -1,9 +1,11 @@
 package com.smartnest.backend.service;
 
 import com.smartnest.backend.dto.CreatePromotionRequest;
+import com.smartnest.backend.model.Apartment;
 import com.smartnest.backend.model.Promotion;
 import com.smartnest.backend.model.PromotionStatus;
 import com.smartnest.backend.model.User;
+import com.smartnest.backend.repository.ApartmentRepository;
 import com.smartnest.backend.repository.PromotionRepository;
 import com.smartnest.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,17 +27,21 @@ public class PromotionService {
     private static final int TITLE_MAX_LENGTH = 255;
     private static final int DISCOUNT_DETAILS_MAX_LENGTH = 1000;
     private static final int MAX_DURATION_YEARS = 2;
-    private static final int MAX_DISCOUNT_PERCENTAGE = 100;
+    private static final int MIN_DISCOUNT_PERCENTAGE = 1;
+    private static final int MAX_DISCOUNT_PERCENTAGE = 90;
 
     private final PromotionRepository promotionRepository;
     private final UserRepository userRepository;
+    private final ApartmentRepository apartmentRepository;
     private final NotificationService notificationService;
+    private final PricingService pricingService;
 
     public Promotion createPromotion(CreatePromotionRequest request, Long actorId) {
         validate(request);
+        Apartment apartment = getApartment(request.getApartmentId());
 
         Promotion promotion = new Promotion();
-        promotion.setApartmentId(request.getApartmentId());
+        promotion.setApartment(apartment);
         promotion.setSalesStaffId(request.getSalesStaffId());
         promotion.setTitle(request.getTitle());
         promotion.setDiscountDetails(request.getDiscountDetails());
@@ -49,12 +55,10 @@ public class PromotionService {
         return withCreatorName(saved);
     }
 
-    // frontend checks these too, but never trust the client alone
     private void validate(CreatePromotionRequest request) {
         if (request.getTitle() == null || request.getTitle().isBlank()) {
             throw new IllegalArgumentException("Promotion title is required");
         }
-        // matches Promotion.title's column length so we fail clean instead of a DB truncation error
         if (request.getTitle().length() > TITLE_MAX_LENGTH) {
             throw new IllegalArgumentException("Promotion title cannot exceed " + TITLE_MAX_LENGTH + " characters");
         }
@@ -68,8 +72,8 @@ public class PromotionService {
             throw new IllegalArgumentException("Sales staff ID is required");
         }
         if (request.getDiscountPercentage() == null
-                || request.getDiscountPercentage().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Discount percentage must be greater than 0");
+                || request.getDiscountPercentage().compareTo(java.math.BigDecimal.valueOf(MIN_DISCOUNT_PERCENTAGE)) < 0) {
+            throw new IllegalArgumentException("Discount percentage must be at least " + MIN_DISCOUNT_PERCENTAGE + "%");
         }
         if (request.getDiscountPercentage().compareTo(java.math.BigDecimal.valueOf(MAX_DISCOUNT_PERCENTAGE)) > 0) {
             throw new IllegalArgumentException("Discount percentage cannot exceed " + MAX_DISCOUNT_PERCENTAGE + "%");
@@ -139,7 +143,6 @@ public class PromotionService {
         promotionRepository.delete(promotion);
     }
 
-    // used to edit-and-resubmit a rejected (or any owned) promotion — always resets it back to PENDING review
     public Promotion updatePromotion(Long promotionId, CreatePromotionRequest request, Long callerId, boolean isAdmin) {
         Promotion promotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new IllegalArgumentException("Promotion not found: " + promotionId));
@@ -147,8 +150,9 @@ public class PromotionService {
             throw new AccessDeniedException("You can only edit your own promotions");
         }
         validate(request);
+        Apartment apartment = getApartment(request.getApartmentId());
 
-        promotion.setApartmentId(request.getApartmentId());
+        promotion.setApartment(apartment);
         promotion.setTitle(request.getTitle());
         promotion.setDiscountDetails(request.getDiscountDetails());
         promotion.setDiscountPercentage(request.getDiscountPercentage());
@@ -164,19 +168,38 @@ public class PromotionService {
         return withCreatorName(saved);
     }
 
+    private Apartment getApartment(Long apartmentId) {
+        if (apartmentId == null) {
+            throw new IllegalArgumentException("Apartment ID is required");
+        }
+        return apartmentRepository.findById(apartmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Apartment not found: " + apartmentId));
+    }
+
     private Promotion withCreatorName(Promotion promotion) {
         return withCreatorNames(List.of(promotion)).get(0);
     }
 
-    // one query for every creator in the list, rather than one per promotion
     private List<Promotion> withCreatorNames(List<Promotion> promotions) {
-        List<Long> ids = promotions.stream()
+        List<Long> staffIds = promotions.stream()
                 .map(Promotion::getSalesStaffId).filter(Objects::nonNull).distinct().toList();
-        Map<Long, User> users = userRepository.findAllById(ids).stream()
+        Map<Long, User> users = userRepository.findAllById(staffIds).stream()
                 .collect(Collectors.toMap(User::getUserId, Function.identity()));
+
+        List<Long> apartmentIds = promotions.stream()
+                .map(Promotion::getApartmentId).filter(Objects::nonNull).distinct().toList();
+        Map<Long, Apartment> apartments = apartmentRepository.findAllById(apartmentIds).stream()
+                .collect(Collectors.toMap(Apartment::getApartmentId, Function.identity()));
+
         for (Promotion p : promotions) {
             User u = users.get(p.getSalesStaffId());
             p.setCreatorName(u == null ? null : (u.getFirstName() + " " + u.getLastName()).trim());
+
+            Apartment a = apartments.get(p.getApartmentId());
+            p.setApartmentTitle(a == null ? null : a.getTitle());
+            p.setApartmentPrice(a == null ? null : a.getPrice());
+            p.setDiscountedPrice(a == null ? null : pricingService.discountedPrice(a.getPrice(), p.getDiscountPercentage()));
+            p.setApartmentImageUrl(a == null ? null : a.getImageUrl());
         }
         return promotions;
     }
