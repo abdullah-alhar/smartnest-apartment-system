@@ -17,17 +17,15 @@ import java.time.LocalDateTime;
 public class Notification {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @NextId
     private Long id;
 
-    // The user this notification belongs to
     @Column(nullable = false)
     private Long userId;
 
     @Column(nullable = false, length = 500)
     private String message;
 
-    // e.g. "PROMOTION" — lets the frontend route a click to the right page as more modules are added
     @Column(nullable = false)
     private String relatedEntityType;
 
@@ -36,7 +34,6 @@ public class Notification {
     @Column(nullable = false)
     private LocalDateTime sentDate;
 
-    // manual accessors + @JsonProperty so the JSON key stays "isRead" (Lombok's default would send "read")
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private boolean isRead = false;
@@ -55,10 +52,8 @@ public class Notification {
     @Column(nullable = false)
     private NotificationType type;
 
-    // snapshot of the entity's title at send time, so the row still reads correctly if the entity is later edited or deleted
     private String entityTitle;
 
-    // populated for rejections only
     @Column(length = 1000)
     private String reason;
 }

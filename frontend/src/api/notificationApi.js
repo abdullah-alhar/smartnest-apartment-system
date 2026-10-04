@@ -6,8 +6,6 @@ const authHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });
 
-// every call is scoped server-side to the JWT's own user — no user id is ever sent
-
 export const getNotifications = async () => {
   const response = await axios.get(API_BASE_URL, { headers: authHeader() });
   return response.data;
@@ -28,7 +26,10 @@ export const markAllNotificationsRead = async () => {
   return response.data;
 };
 
-// relatedEntityType → where clicking the notification should go; add APARTMENT/INQUIRY/etc. as those modules land
 export const ENTITY_ROUTES = {
   PROMOTION: () => "/promotions",
+  APARTMENT: () => "/apartments",
+  INQUIRY: () => "/inquiries",
+  APPOINTMENT: () => "/appointments",
+  RESERVATION: () => "/reservations",
 };

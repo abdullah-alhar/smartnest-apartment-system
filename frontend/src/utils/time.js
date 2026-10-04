@@ -1,4 +1,3 @@
-// backend LocalDateTime/LocalDate strings carry no offset — parse them as local time, never UTC
 function parseLocal(value) {
   if (!value) return null;
   const [datePart, timePart = "00:00:00"] = String(value).split("T");
@@ -19,7 +18,6 @@ export function relativeTime(value) {
   return days === 1 ? "Yesterday" : `${days}d ago`;
 }
 
-// true once a LocalDate has arrived (today counts)
 export function hasStarted(startDate) {
   const start = parseLocal(startDate);
   return !start || start <= new Date();
@@ -34,6 +32,11 @@ export function endsLabel(endDate) {
   if (days < 0) return "Ended";
   if (days === 0) return "Ends today";
   return days === 1 ? "Ends tomorrow" : `Ends in ${days} days`;
+}
+
+export function toBackendLocalDateTime(datetimeLocalValue) {
+  if (!datetimeLocalValue) return null;
+  return datetimeLocalValue.length === 16 ? `${datetimeLocalValue}:00` : datetimeLocalValue;
 }
 
 export function isSameMonth(value, ref = new Date()) {

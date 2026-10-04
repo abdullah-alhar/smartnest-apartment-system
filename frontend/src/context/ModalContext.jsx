@@ -2,8 +2,6 @@ import { createContext, useContext, useState } from "react";
 
 const ModalContext = createContext();
 
-// tracks which single global modal (if any) is open — "createPromotion" | "createStaff" | null
-// modalPayload carries optional extra data, e.g. the promotion being edited when reopening "createPromotion" in edit mode
 export function ModalProvider({ children }) {
   const [activeModal, setActiveModal] = useState(null);
   const [modalPayload, setModalPayload] = useState(null);

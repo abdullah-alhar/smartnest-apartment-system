@@ -1,25 +1,25 @@
-import { Loader2, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { Button, Modal } from "./ui";
 
 function ConfirmDialog({ open, title, description, confirmLabel = "Confirm", danger = true, loading, onConfirm, onCancel }) {
-  if (!open) return null;
-
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal-title">
-          <AlertTriangle size={20} style={{ verticalAlign: -4, marginRight: 8, color: "var(--warning)" }} />
-          {title}
-        </h2>
-        {description && <p className="modal-desc">{description}</p>}
-        <div className="modal-actions">
-          <button className="btn btn-secondary" onClick={onCancel} disabled={loading}>Cancel</button>
-          <button className={`btn ${danger ? "btn-danger" : "btn-primary"}`} onClick={onConfirm} disabled={loading}>
-            {loading ? <Loader2 size={15} className="icon-spin" /> : null}
-            {confirmLabel}
-          </button>
+    <Modal open={open} onClose={loading ? undefined : onCancel} size="sm" dismissable={!loading}
+      footer={(
+        <>
+          <Button variant="ghost" onClick={onCancel} disabled={loading}>Cancel</Button>
+          <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} loading={loading}>{confirmLabel}</Button>
+        </>
+      )}>
+      <div className="flex gap-4">
+        <span className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${danger ? "bg-red-50 text-red-500" : "bg-accent/10 text-accent"}`}>
+          <AlertTriangle size={20} />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold text-primary mb-1">{title}</h2>
+          {description && <p className="text-sm text-grey-500 leading-relaxed">{description}</p>}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

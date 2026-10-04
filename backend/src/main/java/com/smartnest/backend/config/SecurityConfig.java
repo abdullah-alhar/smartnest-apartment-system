@@ -34,27 +34,51 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authorize -> authorize
-                        // preflight OPTIONS has no auth header, so it must be allowed through or every cross-origin POST/PUT fails
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Auth is open to everyone
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/uploads/apartment-images/**").permitAll()
 
-                        // GET /api/promotions (approved list) is fully public
                         .requestMatchers(HttpMethod.GET, "/api/promotions").permitAll()
 
-                        // SALES_STAFF / OPERATIONS_MANAGER / ADMIN may all create promotions
                         .requestMatchers(HttpMethod.POST, "/api/promotions").hasAnyRole("SALES_STAFF", "OPERATIONS_MANAGER", "ADMIN")
 
-                        // Approve/reject endpoints — OPERATIONS_MANAGER, ADMIN (Admin is a super-role)
                         .requestMatchers("/api/promotions/*/approve").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
                         .requestMatchers("/api/promotions/*/reject").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/promotions/pending").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
 
-                        // Admin management endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/apartments/pending").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/apartments", "/api/apartments/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/apartments/*/similar").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/apartments/*/manage").hasAnyRole("SALES_STAFF", "OPERATIONS_MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/apartments").hasAnyRole("SALES_STAFF", "OPERATIONS_MANAGER", "ADMIN")
+                        .requestMatchers("/api/apartments/*/approve").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
+                        .requestMatchers("/api/apartments/*/reject").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
+                        .requestMatchers("/api/apartments/*/mark-sold").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/inquiries/new").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/inquiries").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/inquiries").hasRole("CUSTOMER")
+                        .requestMatchers("/api/inquiries/*/claim").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers("/api/inquiries/*/respond").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers("/api/inquiries/*/close").hasAnyRole("CRO", "ADMIN")
+
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/pending").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/appointments").hasRole("CUSTOMER")
+                        .requestMatchers("/api/appointments/*/approve").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers("/api/appointments/*/reschedule").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers("/api/appointments/*/decline").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers("/api/appointments/*/complete").hasAnyRole("CRO", "ADMIN")
+                        .requestMatchers("/api/appointments/*/cancel").hasRole("CUSTOMER")
+
+                        .requestMatchers(HttpMethod.GET, "/api/reservations/pending").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/reservations").hasRole("CUSTOMER")
+                        .requestMatchers("/api/reservations/*/approve").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
+                        .requestMatchers("/api/reservations/*/reject").hasAnyRole("OPERATIONS_MANAGER", "ADMIN")
+                        .requestMatchers("/api/reservations/*/cancel").hasRole("CUSTOMER")
+
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // Everything else just needs a valid JWT
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -70,7 +94,6 @@ public class SecurityConfig {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
-    // wired into Security's own filter chain so CORS runs before the auth checks do
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-// every endpoint resolves the user from the JWT — there is no userId parameter to tamper with
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor

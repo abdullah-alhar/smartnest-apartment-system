@@ -1,23 +1,17 @@
-import { Link } from "react-router-dom";
+import { Button } from "./ui";
 
-// icon is a Lucide component, not an element, so we can set its size/color here
-// actionTo renders a Link, actionOnClick renders a button — pass whichever fits the target
-function EmptyState({ icon: Icon, title, description, actionTo, actionOnClick, actionLabel }) {
+function EmptyState({ icon: Icon, title, description, actionTo, actionOnClick, actionLabel, className = "" }) {
   return (
-    <div className="empty-state">
+    <div className={`flex flex-col items-center justify-center py-16 px-8 text-center ${className}`}>
       {Icon && (
-        <div className="empty-icon">
-          <Icon size={40} strokeWidth={1.5} />
+        <div className="w-16 h-16 rounded-2xl bg-off-white flex items-center justify-center text-grey-300 mb-4">
+          <Icon size={30} strokeWidth={1.5} />
         </div>
       )}
-      <h2 className="empty-title">{title}</h2>
-      {description && <p className="empty-desc">{description}</p>}
-      {actionLabel && actionOnClick && (
-        <button type="button" onClick={actionOnClick} className="btn btn-primary mt-4">{actionLabel}</button>
-      )}
-      {actionLabel && actionTo && !actionOnClick && (
-        <Link to={actionTo} className="btn btn-primary mt-4">{actionLabel}</Link>
-      )}
+      <p className="text-base font-semibold text-primary mb-1">{title}</p>
+      {description && <p className="text-sm text-grey-400 max-w-sm">{description}</p>}
+      {actionLabel && actionOnClick && <Button className="mt-5" onClick={actionOnClick}>{actionLabel}</Button>}
+      {actionLabel && actionTo && !actionOnClick && <Button className="mt-5" variant="accent" to={actionTo}>{actionLabel}</Button>}
     </div>
   );
 }

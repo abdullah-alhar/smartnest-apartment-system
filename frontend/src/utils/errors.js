@@ -1,4 +1,3 @@
-// backend errors can come back as a string, {message}, or {error} — check all three
 export function extractErrorMessage(err, fallback = "Something went wrong. Please try again.") {
   const body = err?.response?.data;
   if (typeof body === "string" && body.trim()) return body.trim();

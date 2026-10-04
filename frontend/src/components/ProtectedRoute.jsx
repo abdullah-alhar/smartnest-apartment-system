@@ -1,7 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// wraps a route that needs auth; pass allowedRoles to also restrict by role
 function ProtectedRoute({ children, allowedRoles, redirectTo = "/login" }) {
   const { token, role } = useAuth();
 
