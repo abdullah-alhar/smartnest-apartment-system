@@ -29,7 +29,6 @@ export const rejectPromotion = async (promotionId, operationsManagerId, reason) 
   return response.data;
 };
 
-// public — no auth header needed
 export const getActivePromotions = async () => {
   const response = await axios.get(API_BASE_URL);
   return response.data;

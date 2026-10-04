@@ -1,14 +1,15 @@
-import { useState } from "react";
-import { Building2, User, Tag, Percent, Calendar, Star, Loader2, Send, AlertCircle, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Building2, User, Tag, Percent, Calendar, Star, Send } from "lucide-react";
 import { createPromotion, updatePromotion } from "../../api/promotionApi";
+import { getApprovedApartments } from "../../api/apartmentApi";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { extractErrorMessage } from "../../utils/errors";
+import { Button, Input, Modal, Select, Textarea } from "../ui";
 
 const MAX_DURATION_YEARS = 2;
-const MAX_DISCOUNT_PERCENTAGE = 100;
+const MAX_DISCOUNT_PERCENTAGE = 90;
 
-// editTarget is the existing promotion being edited-and-resubmitted, or null/undefined for a fresh create
 function CreatePromotionModal({ onClose, editTarget }) {
   const { userId } = useAuth();
   const toast = useToast();
@@ -27,6 +28,13 @@ function CreatePromotionModal({ onClose, editTarget }) {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [apartments, setApartments] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getApprovedApartments().then((rows) => { if (!cancelled) setApartments(rows); }).catch(() => { if (!cancelled) setApartments([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   const handle = (e) => {
     const { name, value, type, checked } = e.target;
@@ -36,8 +44,8 @@ function CreatePromotionModal({ onClose, editTarget }) {
 
   const validate = () => {
     const errors = {};
-    if (!(parseFloat(form.discountPercentage) > 0)) {
-      errors.discountPercentage = "Discount percentage must be greater than 0.";
+    if (!(parseFloat(form.discountPercentage) >= 1)) {
+      errors.discountPercentage = "Discount percentage must be at least 1%.";
     } else if (parseFloat(form.discountPercentage) > MAX_DISCOUNT_PERCENTAGE) {
       errors.discountPercentage = `Discount percentage cannot exceed ${MAX_DISCOUNT_PERCENTAGE}%.`;
     }
@@ -65,7 +73,6 @@ function CreatePromotionModal({ onClose, editTarget }) {
     const payload = {
       ...form,
       apartmentId:        parseInt(form.apartmentId, 10),
-      // Always use the logged-in user's ID — never trust what's in the input field
       salesStaffId:       parseInt(userId, 10),
       discountPercentage: parseFloat(form.discountPercentage),
     };
@@ -86,118 +93,56 @@ function CreatePromotionModal({ onClose, editTarget }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header-row">
-          <h2 className="modal-title">{isEdit ? "Edit Promotion" : "Create Promotion"}</h2>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">
-            <X size={18} />
-          </button>
+    <Modal onClose={onClose} size="lg" icon={Tag}
+      title={isEdit ? "Edit Promotion" : "Create Promotion"}
+      description={isEdit ? "Update the details below and resubmit for Operations Manager review." : "Submit a new promotion for Operations Manager review."}
+      footer={(
+        <>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button id="cp-submit-btn" type="submit" form="promotion-form" icon={Send} loading={loading}>
+            {isEdit ? "Resubmit Promotion" : "Submit Promotion"}
+          </Button>
+        </>
+      )}>
+      <form id="promotion-form" onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Select id="cp-apt" label="Apartment" icon={Building2} name="apartmentId" value={form.apartmentId} onChange={handle} required disabled={apartments === null}
+            hint={apartments?.length === 0 ? "No approved apartments yet — list and approve one first." : undefined}>
+            <option value="">{apartments === null ? "Loading apartments…" : "Select an apartment"}</option>
+            {apartments?.map((a) => (
+              <option key={a.apartmentId} value={a.apartmentId}>{a.title} — LKR {Number(a.price).toLocaleString("en-US")}</option>
+            ))}
+          </Select>
+          <Input id="cp-staff" label="Sales Staff ID" icon={User} name="salesStaffId" type="number" value={form.salesStaffId} readOnly disabled
+            hint="Your account ID — cannot be changed" />
         </div>
-        <p className="modal-desc">
-          {isEdit
-            ? "Update the details below and resubmit for Operations Manager review."
-            : "Submit a new promotion for Operations Manager review."}
-        </p>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="form-grid form-grid-2">
-            <div className="form-group">
-              <label className="form-label" htmlFor="cp-apt">Apartment ID</label>
-              <div className="input-icon-wrap">
-                <Building2 size={16} className="input-icon" />
-                <input id="cp-apt" className="form-input has-icon" name="apartmentId" type="number"
-                  placeholder="e.g. 42" min="1" value={form.apartmentId} onChange={handle} required />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="cp-staff">Sales Staff ID</label>
-              <div className="input-icon-wrap">
-                <User size={16} className="input-icon" />
-                <input id="cp-staff" className="form-input has-icon" name="salesStaffId" type="number"
-                  value={form.salesStaffId}
-                  readOnly
-                  style={{ opacity: 0.6, cursor: "not-allowed" }}
-                />
-              </div>
-              <span className="form-hint">Your account ID — cannot be changed</span>
-            </div>
-          </div>
+        <Input id="cp-title" label="Promotion Title" icon={Tag} name="title" maxLength={255} placeholder="e.g. Year-End Move-In Special"
+          value={form.title} onChange={handle} required />
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="cp-title">Promotion Title</label>
-            <div className="input-icon-wrap">
-              <Tag size={16} className="input-icon" />
-              <input id="cp-title" className="form-input has-icon" name="title" maxLength={255}
-                placeholder="e.g. Summer Move-In Special" value={form.title} onChange={handle} required />
-            </div>
-          </div>
+        <Textarea id="cp-details" label="Discount Details" name="discountDetails" maxLength={1000} placeholder="Describe the promotion offer…"
+          value={form.discountDetails} onChange={handle} />
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="cp-details">Discount Details</label>
-            <textarea id="cp-details" className="form-textarea" name="discountDetails" maxLength={1000}
-              placeholder="Describe the promotion offer…" value={form.discountDetails} onChange={handle} />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Input id="cp-pct" label="Discount %" icon={Percent} name="discountPercentage" type="number"
+            placeholder={`1–${MAX_DISCOUNT_PERCENTAGE}`} min="1" max={MAX_DISCOUNT_PERCENTAGE} step="0.01"
+            value={form.discountPercentage} onChange={handle} error={fieldErrors.discountPercentage} required />
+          <Input id="cp-start" label="Start Date" icon={Calendar} name="startDate" type="date" min={today}
+            value={form.startDate} onChange={handle} error={fieldErrors.startDate} required />
+          <Input id="cp-end" label="End Date" icon={Calendar} name="endDate" type="date"
+            value={form.endDate} onChange={handle} error={fieldErrors.endDate} required />
+        </div>
 
-          <div className="form-grid form-grid-3">
-            <div className="form-group">
-              <label className="form-label" htmlFor="cp-pct">Discount %</label>
-              <div className="input-icon-wrap">
-                <Percent size={16} className="input-icon" />
-                <input id="cp-pct" className={`form-input has-icon ${fieldErrors.discountPercentage ? "has-error" : ""}`}
-                  name="discountPercentage" type="number"
-                  placeholder={`1–${MAX_DISCOUNT_PERCENTAGE}`} min="0.01" max={MAX_DISCOUNT_PERCENTAGE} step="0.01"
-                  value={form.discountPercentage} onChange={handle} required />
-              </div>
-              {fieldErrors.discountPercentage && (
-                <span className="field-error"><AlertCircle size={13} />{fieldErrors.discountPercentage}</span>
-              )}
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="cp-start">Start Date</label>
-              <div className="input-icon-wrap">
-                <Calendar size={16} className="input-icon" />
-                <input id="cp-start" className={`form-input has-icon ${fieldErrors.startDate ? "has-error" : ""}`}
-                  name="startDate" type="date" min={today}
-                  value={form.startDate} onChange={handle} required />
-              </div>
-              {fieldErrors.startDate && (
-                <span className="field-error"><AlertCircle size={13} />{fieldErrors.startDate}</span>
-              )}
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="cp-end">End Date</label>
-              <div className="input-icon-wrap">
-                <Calendar size={16} className="input-icon" />
-                <input id="cp-end" className={`form-input has-icon ${fieldErrors.endDate ? "has-error" : ""}`}
-                  name="endDate" type="date"
-                  value={form.endDate} onChange={handle} required />
-              </div>
-              {fieldErrors.endDate && (
-                <span className="field-error"><AlertCircle size={13} />{fieldErrors.endDate}</span>
-              )}
-            </div>
-          </div>
-
-          <label className="toggle-label">
-            <input className="toggle-input" type="checkbox" name="isFeatured"
-              checked={form.isFeatured} onChange={handle} />
-            <span className="toggle-track" />
-            <Star size={14} /> Mark as Featured
-          </label>
-
-          <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button id="cp-submit-btn" type="submit" className="btn btn-primary" disabled={loading}>
-              {loading
-                ? <><Loader2 size={16} className="icon-spin" /> {isEdit ? "Resubmitting…" : "Submitting…"}</>
-                : <><Send size={15} /> {isEdit ? "Resubmit Promotion" : "Submit Promotion"}</>
-              }
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <label className="flex items-center justify-between gap-4 bg-off-white rounded-xl px-4 py-3 cursor-pointer">
+          <span className="flex items-center gap-2 text-sm font-medium text-primary"><Star size={15} className="text-accent" /> Mark as featured</span>
+          <span className="relative inline-flex">
+            <input type="checkbox" name="isFeatured" className="peer sr-only" checked={form.isFeatured} onChange={handle} />
+            <span className="w-10 h-6 rounded-full bg-grey-200 peer-checked:bg-accent transition-colors" />
+            <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
+          </span>
+        </label>
+      </form>
+    </Modal>
   );
 }
 

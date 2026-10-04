@@ -1,5 +1,6 @@
 package com.smartnest.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -19,13 +20,42 @@ import java.time.LocalDateTime;
 public class Promotion {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @NextId
     private Long id;
 
-    // The apartment this promotion applies to
-    private Long apartmentId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "apartment_id", nullable = false)
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private Apartment apartment;
 
-    // The SalesStaff member who submitted the promotion
+    @JsonIgnore
+    public Apartment getApartment() {
+        return apartment;
+    }
+
+    public void setApartment(Apartment apartment) {
+        this.apartment = apartment;
+    }
+
+    @Transient
+    @JsonProperty("apartmentId")
+    public Long getApartmentId() {
+        return apartment != null ? apartment.getApartmentId() : null;
+    }
+
+    @Transient
+    private String apartmentTitle;
+
+    @Transient
+    private BigDecimal apartmentPrice;
+
+    @Transient
+    private BigDecimal discountedPrice;
+
+    @Transient
+    private String apartmentImageUrl;
+
     private Long salesStaffId;
 
     @Column(nullable = false)
@@ -43,7 +73,6 @@ public class Promotion {
     @Column(nullable = false)
     private LocalDate endDate;
 
-    // manual accessors + @JsonProperty so the JSON key stays "isFeatured" (Lombok's default would send "featured")
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private boolean isFeatured = false;
@@ -62,16 +91,12 @@ public class Promotion {
     @Column(nullable = false)
     private PromotionStatus status = PromotionStatus.PENDING;
 
-    // Populated by OperationsManager on rejection
     private String rejectionReason;
 
-    // The OperationsManager who approved or rejected
     private Long reviewedByManagerId;
 
-    // when the approve/reject decision was made — cleared again on resubmission
     private LocalDateTime reviewedAt;
 
-    // not stored — filled in by PromotionService for list responses so the UI can show "Submitted by"
     @Transient
     private String creatorName;
 }

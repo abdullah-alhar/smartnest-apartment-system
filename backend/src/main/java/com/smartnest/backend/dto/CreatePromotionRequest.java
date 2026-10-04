@@ -19,7 +19,6 @@ public class CreatePromotionRequest {
     private LocalDate startDate;
     private LocalDate endDate;
 
-    // See Promotion.isFeatured for why the accessors are overridden this way.
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private boolean isFeatured;

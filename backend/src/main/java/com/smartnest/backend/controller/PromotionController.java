@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-// ADMIN is layered onto every rule below as a super-role — hasRole() auto-prefixes "ROLE_", don't pass "ROLE_ADMIN" or it doubles up
 @RestController
 @RequestMapping("/api/promotions")
 @RequiredArgsConstructor
@@ -52,7 +51,6 @@ public class PromotionController {
         return userService.getByEmail(authentication.getName()).getUserId();
     }
 
-    // public, no auth needed — returns only APPROVED promotions
     @GetMapping
     public ResponseEntity<List<Promotion>> getActivePromotions() {
         return ResponseEntity.ok(promotionService.getActivePromotions());
@@ -69,7 +67,6 @@ public class PromotionController {
     public ResponseEntity<List<Promotion>> getMyPromotions(@PathVariable Long salesStaffId, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        // SalesStaff can only ever see their own — id in the URL must match their own JWT identity
         if (!isAdmin) {
             User caller = userService.getByEmail(authentication.getName());
             if (!caller.getUserId().equals(salesStaffId)) {
