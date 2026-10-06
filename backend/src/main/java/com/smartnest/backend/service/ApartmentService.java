@@ -10,7 +10,9 @@ import com.smartnest.backend.model.User;
 import com.smartnest.backend.repository.ApartmentRepository;
 import com.smartnest.backend.repository.ReservationRepository;
 import com.smartnest.backend.repository.UserRepository;
+import com.smartnest.backend.event.ApartmentEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +36,7 @@ public class ApartmentService {
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final PricingService pricingService;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher events; // Observer pattern: we only publish events
     private final ApartmentImageService apartmentImageService;
 
     @Transactional
@@ -48,7 +50,7 @@ public class ApartmentService {
         apartment.setAvailabilityStatus(AvailabilityStatus.AVAILABLE);
 
         Apartment saved = apartmentRepository.save(apartment);
-        notificationService.apartmentSubmitted(saved, actorId, false);
+        events.publishEvent(new ApartmentEvent(ApartmentEvent.Action.SUBMITTED, saved, actorId));
         return withCreatedByName(saved);
     }
 
@@ -95,7 +97,7 @@ public class ApartmentService {
         apartment.setRejectionReason(null);
         apartment.setReviewedAt(LocalDateTime.now());
         Apartment saved = apartmentRepository.save(apartment);
-        notificationService.apartmentApproved(saved, actorId);
+        events.publishEvent(new ApartmentEvent(ApartmentEvent.Action.APPROVED, saved, actorId));
         return withCreatedByName(saved);
     }
 
@@ -109,7 +111,7 @@ public class ApartmentService {
         apartment.setRejectionReason(reason);
         apartment.setReviewedAt(LocalDateTime.now());
         Apartment saved = apartmentRepository.save(apartment);
-        notificationService.apartmentRejected(saved, actorId);
+        events.publishEvent(new ApartmentEvent(ApartmentEvent.Action.REJECTED, saved, actorId));
         return withCreatedByName(saved);
     }
 
@@ -169,7 +171,7 @@ public class ApartmentService {
         apartment.setReviewedByManagerId(null);
         apartment.setReviewedAt(null);
         Apartment saved = apartmentRepository.save(apartment);
-        notificationService.apartmentSubmitted(saved, callerId, true);
+        events.publishEvent(new ApartmentEvent(ApartmentEvent.Action.RESUBMITTED, saved, callerId));
         return withCreatedByName(saved);
     }
 

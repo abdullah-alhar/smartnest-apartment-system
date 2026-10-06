@@ -1,3 +1,5 @@
+// DESIGN PATTERN: Singleton (Creational) - Spring creates only ONE NotificationService and shares it everywhere
+
 package com.smartnest.backend.service;
 
 import com.smartnest.backend.model.Apartment;
@@ -84,6 +86,18 @@ public class NotificationService {
     public void promotionRejected(Promotion promotion, Long actorId) {
         notifyUser(promotion.getSalesStaffId(), actorId, "Your promotion was rejected and returned for changes.",
                 NotificationType.REJECTED, PROMOTION, promotion.getId(), promotion.getTitle(), promotion.getRejectionReason());
+    }
+
+    /** Tells every active customer about a newly approved promotion. Clicking it opens /promotions. */
+    public void promotionOfferToCustomers(Promotion promotion) {
+        String discount = promotion.getDiscountPercentage().stripTrailingZeros().toPlainString();
+        String message = "New offer: " + promotion.getTitle() + " - " + discount + "% off";
+        for (User customer : userRepository.findByRole(Role.CUSTOMER)) {
+            if (customer.isActiveOrDefault()) {
+                save(customer.getUserId(), message, NotificationType.APPROVED, PROMOTION,
+                        promotion.getId(), promotion.getTitle(), null);
+            }
+        }
     }
 
     /* ---------- Apartment listings ---------- */

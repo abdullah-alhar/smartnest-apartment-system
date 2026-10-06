@@ -16,7 +16,9 @@ import com.smartnest.backend.repository.CustomerRepository;
 import com.smartnest.backend.repository.OperationalManagerRepository;
 import com.smartnest.backend.repository.PaymentRecordRepository;
 import com.smartnest.backend.repository.ReservationRepository;
+import com.smartnest.backend.event.ReservationEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.PathResource;
 import org.springframework.core.io.Resource;
@@ -49,7 +51,7 @@ public class ReservationService {
     private final CustomerRepository customerRepository;
     private final ApartmentRepository apartmentRepository;
     private final OperationalManagerRepository operationalManagerRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher events; // Observer pattern: we only publish events
 
     private static final long MAX_PROOF_BYTES = 5L * 1024 * 1024;
     private static final byte[] PDF_MAGIC = {'%', 'P', 'D', 'F'};
@@ -88,7 +90,7 @@ public class ReservationService {
         payment.setPaymentMethod(request.getPaymentMethod());
         paymentRecordRepository.save(payment);
 
-        notificationService.reservationSubmitted(saved);
+        events.publishEvent(new ReservationEvent(ReservationEvent.Action.SUBMITTED, saved));
         return enrich(saved);
     }
 
@@ -144,7 +146,7 @@ public class ReservationService {
         reservation.setOperationsManager(manager);
         Reservation saved = reservationRepository.save(reservation);
 
-        notificationService.reservationApproved(saved);
+        events.publishEvent(new ReservationEvent(ReservationEvent.Action.APPROVED, saved));
         return enrich(saved);
     }
 
@@ -166,7 +168,7 @@ public class ReservationService {
         reservation.setRejectionReason(reason);
         Reservation saved = reservationRepository.save(reservation);
 
-        notificationService.reservationRejected(saved);
+        events.publishEvent(new ReservationEvent(ReservationEvent.Action.REJECTED, saved));
         return enrich(saved);
     }
 
@@ -190,7 +192,7 @@ public class ReservationService {
 
         reservation.setStatus(ReservationStatus.CANCELLED);
         Reservation saved = reservationRepository.save(reservation);
-        notificationService.reservationCancelled(saved);
+        events.publishEvent(new ReservationEvent(ReservationEvent.Action.CANCELLED, saved));
         return enrich(saved);
     }
 
@@ -225,7 +227,7 @@ public class ReservationService {
         advancePayment.setPaymentMethod(req.getPaymentMethod());
         paymentRecordRepository.save(advancePayment);
 
-        notificationService.reservationChanged(reservation);
+        events.publishEvent(new ReservationEvent(ReservationEvent.Action.CHANGED, reservation));
         return enrich(reservation);
     }
 
@@ -272,7 +274,7 @@ public class ReservationService {
         advance.setProofFilePath(relative);
         advance.setProofFileName(cleanFileName(file.getOriginalFilename()));
         paymentRecordRepository.save(advance);
-        notificationService.reservationProofUploaded(reservation);
+        events.publishEvent(new ReservationEvent(ReservationEvent.Action.PROOF_UPLOADED, reservation));
         return enrich(reservation);
     }
 

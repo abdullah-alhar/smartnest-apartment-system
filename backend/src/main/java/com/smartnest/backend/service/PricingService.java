@@ -1,3 +1,5 @@
+// DESIGN PATTERN: Singleton (Creational) - Spring creates only ONE PricingService and shares it everywhere
+
 package com.smartnest.backend.service;
 
 import com.smartnest.backend.dto.PromotionSummaryResponse;

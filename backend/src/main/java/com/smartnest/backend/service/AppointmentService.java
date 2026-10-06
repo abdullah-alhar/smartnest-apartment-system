@@ -15,7 +15,9 @@ import com.smartnest.backend.repository.ApartmentRepository;
 import com.smartnest.backend.repository.AppointmentRepository;
 import com.smartnest.backend.repository.CRORepository;
 import com.smartnest.backend.repository.CustomerRepository;
+import com.smartnest.backend.event.AppointmentEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +37,7 @@ public class AppointmentService {
     private final CustomerRepository customerRepository;
     private final ApartmentRepository apartmentRepository;
     private final CRORepository croRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher events; // Observer pattern: we only publish events
 
     private static final LocalTime WORK_START = LocalTime.of(9, 0);
     private static final LocalTime WORK_END = LocalTime.of(17, 0);
@@ -69,7 +71,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.PENDING);
 
         Appointment saved = appointmentRepository.save(appointment);
-        notificationService.appointmentRequested(saved);
+        events.publishEvent(new AppointmentEvent(AppointmentEvent.Action.REQUESTED, saved));
 
         return toResponse(saved);
     }
@@ -111,7 +113,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.APPROVED);
 
         Appointment saved = appointmentRepository.save(appointment);
-        notificationService.appointmentApproved(saved);
+        events.publishEvent(new AppointmentEvent(AppointmentEvent.Action.APPROVED, saved));
         return toResponse(saved);
     }
 
@@ -140,7 +142,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.RESCHEDULED);
 
         Appointment saved = appointmentRepository.save(appointment);
-        notificationService.appointmentRescheduled(saved);
+        events.publishEvent(new AppointmentEvent(AppointmentEvent.Action.RESCHEDULED, saved));
         return toResponse(saved);
     }
 
@@ -157,7 +159,7 @@ public class AppointmentService {
         appointment.setDeclineReason(req.getReason());
 
         Appointment saved = appointmentRepository.save(appointment);
-        notificationService.appointmentDeclined(saved);
+        events.publishEvent(new AppointmentEvent(AppointmentEvent.Action.DECLINED, saved));
         return toResponse(saved);
     }
 
@@ -173,7 +175,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.COMPLETED);
 
         Appointment saved = appointmentRepository.save(appointment);
-        notificationService.appointmentCompleted(saved);
+        events.publishEvent(new AppointmentEvent(AppointmentEvent.Action.COMPLETED, saved));
         return toResponse(saved);
     }
 
@@ -192,7 +194,7 @@ public class AppointmentService {
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         Appointment saved = appointmentRepository.save(appointment);
-        notificationService.appointmentCancelled(saved);
+        events.publishEvent(new AppointmentEvent(AppointmentEvent.Action.CANCELLED, saved));
         return toResponse(saved);
     }
 
@@ -223,7 +225,7 @@ public class AppointmentService {
         appointment.setRequestedDate(requested);
         appointment.setScheduledDate(requested);
         Appointment saved = appointmentRepository.save(appointment);
-        notificationService.appointmentChanged(saved);
+        events.publishEvent(new AppointmentEvent(AppointmentEvent.Action.CHANGED, saved));
         return toResponse(saved);
     }
 
