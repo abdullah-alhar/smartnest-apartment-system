@@ -1,0 +1,106 @@
+@import 'tailwindcss';
+
+/* Design tokens — "Evergreen & Copper" palette. Change colours here only; components use these names. */
+@theme {
+  --color-primary: #1C3530;
+  --color-primary-light: #274A42;
+  --color-primary-muted: #33594F;
+  --color-accent: #A15F2E;
+  --color-accent-light: #E3A36F;   /* copper for text on dark backgrounds */
+  --color-accent-dark: #874E26;
+  --color-off-white: #F2F4F1;
+  --color-cream: #E4E9E3;
+
+  /* green: muted to match the palette */
+  --color-green-50: #F0F6F3; --color-green-100: #E2EDE8; --color-green-200: #C9DDD4; --color-green-300: #A1C4B4; --color-green-400: #72A58E; --color-green-500: #4C8D70; --color-green-600: #2F7B59; --color-green-700: #296B4E; --color-green-800: #235A42; --color-green-900: #1E4A37;
+  /* emerald: muted to match the palette */
+  --color-emerald-50: #F0F6F4; --color-emerald-100: #E2ECEA; --color-emerald-200: #C9DCD8; --color-emerald-300: #A1C2BB; --color-emerald-400: #71A398; --color-emerald-500: #4B8B7D; --color-emerald-600: #2E7868; --color-emerald-700: #28685A; --color-emerald-800: #23584C; --color-emerald-900: #1D483F;
+  /* amber: muted to match the palette */
+  --color-amber-50: #F8F5EF; --color-amber-100: #F0ECE0; --color-amber-200: #E3DBC5; --color-amber-300: #CFC19B; --color-amber-400: #B7A167; --color-amber-500: #A4883F; --color-amber-600: #957520; --color-amber-700: #7F661E; --color-amber-800: #69561C; --color-amber-900: #534719;
+  /* red: muted to match the palette */
+  --color-red-50: #F9F3F1; --color-red-100: #F3E6E4; --color-red-200: #E9D1CD; --color-red-300: #DAAFA8; --color-red-400: #C7877C; --color-red-500: #B86759; --color-red-600: #AC4E3E; --color-red-700: #924537; --color-red-800: #783C30; --color-red-900: #5F3329;
+  /* blue: muted to match the palette */
+  --color-blue-50: #F1F5F7; --color-blue-100: #E4EAEE; --color-blue-200: #CDD9E0; --color-blue-300: #A8BCC9; --color-blue-400: #7B9AAD; --color-blue-500: #588098; --color-blue-600: #3D6B87; --color-blue-700: #355D74; --color-blue-800: #2D4F62; --color-blue-900: #25424F;
+  /* purple: muted to match the palette */
+  --color-purple-50: #F5F4F6; --color-purple-100: #EAE8EE; --color-purple-200: #D9D4DF; --color-purple-300: #BCB5C7; --color-purple-400: #9A8FAB; --color-purple-500: #807294; --color-purple-600: #6B5B83; --color-purple-700: #5C5071; --color-purple-800: #4C455F; --color-purple-900: #3D394D;
+  /* Neutrals lean slightly green so greys feel chosen, not default. */
+  --color-grey-50: #F7F8F6; --color-grey-100: #EEF1EE; --color-grey-200: #DFE5E1; --color-grey-300: #C7CFCA; --color-grey-400: #95A09A; --color-grey-500: #69736E; --color-grey-600: #4E5A54; --color-grey-700: #3A4640; --color-grey-800: #253029; --color-grey-900: #18201C;
+  --color-gray-50: #F7F8F6; --color-gray-100: #EEF1EE; --color-gray-200: #DFE5E1; --color-gray-300: #C7CFCA; --color-gray-400: #95A09A; --color-gray-500: #69736E; --color-gray-600: #4E5A54; --color-gray-700: #3A4640; --color-gray-800: #253029; --color-gray-900: #18201C;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 4px 16px 0 rgb(0 0 0 / 0.06);
+  --shadow-elevated: 0 8px 32px 0 rgb(0 0 0 / 0.10), 0 2px 8px 0 rgb(0 0 0 / 0.06);
+  --shadow-modal: 0 24px 64px 0 rgb(0 0 0 / 0.18);
+
+  --animate-fade-in: fade-in 0.2s ease;
+  --animate-slide-in-right: slide-in-right 0.3s ease forwards;
+  --animate-rise: rise 0.35s ease both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-in-right {
+  from { transform: translateX(110%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+  body {
+    margin: 0;
+    background-color: var(--color-off-white);
+    color: var(--color-primary);
+  }
+  button:not(:disabled), [role="button"] { cursor: pointer; }
+  input:focus, select:focus, textarea:focus { outline: none; }
+}
+
+@layer components {
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-grey-200) 25%, var(--color-grey-100) 50%, var(--color-grey-200) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+    display: block;
+  }
+
+  /* Placeholder "photo" for listings — the apartment data has no images. */
+  .apt-visual {
+    background-color: var(--color-primary);
+    background-image:
+      radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--color-accent) 30%, transparent), transparent 45%),
+      linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-muted) 100%);
+  }
+  .apt-visual::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.12;
+    background-image:
+      repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, #fff 0 1px, transparent 1px 28px);
+  }
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-grey-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-grey-400); }
+.staff-sidebar::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-accent) 35%, transparent); }
