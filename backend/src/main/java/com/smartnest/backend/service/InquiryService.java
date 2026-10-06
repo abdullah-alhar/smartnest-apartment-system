@@ -12,7 +12,9 @@ import com.smartnest.backend.repository.ApartmentRepository;
 import com.smartnest.backend.repository.CRORepository;
 import com.smartnest.backend.repository.CustomerRepository;
 import com.smartnest.backend.repository.InquiryRepository;
+import com.smartnest.backend.event.InquiryEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +30,7 @@ public class InquiryService {
     private final CustomerRepository customerRepository;
     private final ApartmentRepository apartmentRepository;
     private final CRORepository croRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher events; // Observer pattern: we only publish events
 
     @Transactional
     public Inquiry createInquiry(Long customerId, CreateInquiryRequest request) {
@@ -44,7 +46,7 @@ public class InquiryService {
         inquiry.setStatus(InquiryStatus.NEW);
 
         Inquiry saved = inquiryRepository.save(inquiry);
-        notificationService.inquirySubmitted(saved);
+        events.publishEvent(new InquiryEvent(InquiryEvent.Action.SUBMITTED, saved));
         return enrich(saved);
     }
 
@@ -73,7 +75,7 @@ public class InquiryService {
         inquiry.setStaffReply(request.getReply());
         inquiry.setStatus(InquiryStatus.RESPONDED);
         Inquiry saved = inquiryRepository.save(inquiry);
-        notificationService.inquiryResponded(saved);
+        events.publishEvent(new InquiryEvent(InquiryEvent.Action.RESPONDED, saved));
         return enrich(saved);
     }
 
@@ -85,7 +87,7 @@ public class InquiryService {
         }
         inquiry.setStatus(InquiryStatus.CLOSED);
         Inquiry saved = inquiryRepository.save(inquiry);
-        notificationService.inquiryClosed(saved);
+        events.publishEvent(new InquiryEvent(InquiryEvent.Action.CLOSED, saved));
         return enrich(saved);
     }
 

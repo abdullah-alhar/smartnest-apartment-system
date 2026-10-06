@@ -8,7 +8,9 @@ import com.smartnest.backend.model.User;
 import com.smartnest.backend.repository.ApartmentRepository;
 import com.smartnest.backend.repository.PromotionRepository;
 import com.smartnest.backend.repository.UserRepository;
+import com.smartnest.backend.event.PromotionEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +35,7 @@ public class PromotionService {
     private final PromotionRepository promotionRepository;
     private final UserRepository userRepository;
     private final ApartmentRepository apartmentRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher events; // Observer pattern: we only publish events
     private final PricingService pricingService;
 
     public Promotion createPromotion(CreatePromotionRequest request, Long actorId) {
@@ -51,7 +53,7 @@ public class PromotionService {
         promotion.setFeatured(request.isFeatured());
         promotion.setStatus(PromotionStatus.PENDING);
         Promotion saved = promotionRepository.save(promotion);
-        notificationService.promotionSubmitted(saved, actorId, false);
+        events.publishEvent(new PromotionEvent(PromotionEvent.Action.SUBMITTED, saved, actorId));
         return withCreatorName(saved);
     }
 
@@ -103,7 +105,7 @@ public class PromotionService {
         promotion.setRejectionReason(null);
         promotion.setReviewedAt(LocalDateTime.now());
         Promotion saved = promotionRepository.save(promotion);
-        notificationService.promotionApproved(saved, actorId);
+        events.publishEvent(new PromotionEvent(PromotionEvent.Action.APPROVED, saved, actorId));
         return withCreatorName(saved);
     }
 
@@ -118,7 +120,7 @@ public class PromotionService {
         promotion.setRejectionReason(reason);
         promotion.setReviewedAt(LocalDateTime.now());
         Promotion saved = promotionRepository.save(promotion);
-        notificationService.promotionRejected(saved, actorId);
+        events.publishEvent(new PromotionEvent(PromotionEvent.Action.REJECTED, saved, actorId));
         return withCreatorName(saved);
     }
 
@@ -164,7 +166,7 @@ public class PromotionService {
         promotion.setReviewedByManagerId(null);
         promotion.setReviewedAt(null);
         Promotion saved = promotionRepository.save(promotion);
-        notificationService.promotionSubmitted(saved, callerId, true);
+        events.publishEvent(new PromotionEvent(PromotionEvent.Action.RESUBMITTED, saved, callerId));
         return withCreatorName(saved);
     }
 

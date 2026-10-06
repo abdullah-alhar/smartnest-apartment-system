@@ -2,6 +2,7 @@ package com.smartnest.backend.controller;
 
 import com.smartnest.backend.dto.CreateStaffRequest;
 import com.smartnest.backend.dto.UserSummaryResponse;
+import com.smartnest.backend.factory.StaffFactory;
 import com.smartnest.backend.model.*;
 import com.smartnest.backend.service.UserService;
 import jakarta.validation.Valid;
@@ -20,18 +21,13 @@ import java.util.Map;
 public class AdminController {
 
     private final UserService userService;
+    private final StaffFactory staffFactory;
 
     @PostMapping("/create-staff")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> createStaff(@Valid @RequestBody CreateStaffRequest request) {
-        Staff staff = switch (request.getRole()) {
-            case ADMIN -> new Admin();
-            case CRO -> new CRO();
-            case SALES_STAFF -> new SalesStaff();
-            case OPERATIONS_MANAGER -> new OperationalManager();
-            case MARKETING_EXECUTIVE -> new MarketingExecutive();
-            default -> throw new IllegalArgumentException("Invalid staff role");
-        };
+        // Factory pattern: the factory decides which Staff subclass to create for this role.
+        Staff staff = staffFactory.create(request.getRole());
 
         staff.setFirstName(request.getFirstName());
         staff.setLastName(request.getLastName());

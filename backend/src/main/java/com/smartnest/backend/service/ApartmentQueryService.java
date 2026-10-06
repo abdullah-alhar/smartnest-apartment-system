@@ -14,6 +14,11 @@ import com.smartnest.backend.model.User;
 import com.smartnest.backend.repository.ApartmentRepository;
 import com.smartnest.backend.repository.PromotionRepository;
 import com.smartnest.backend.repository.UserRepository;
+import com.smartnest.backend.service.sort.ApartmentSortStrategy;
+import com.smartnest.backend.service.sort.BiggestDiscountSort;
+import com.smartnest.backend.service.sort.NewestFirstSort;
+import com.smartnest.backend.service.sort.PriceHighToLowSort;
+import com.smartnest.backend.service.sort.PriceLowToHighSort;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -46,6 +51,15 @@ public class ApartmentQueryService {
     private static final int MAX_PAGE_SIZE = 48;
     private static final int SIMILAR_LIMIT = 4;
     private static final int FEATURED_LIMIT = 6;
+
+    // DESIGN PATTERN: Strategy (Behavioral) - this class is the Context; it holds the sort strategies.
+    // The key is the ?sort= value sent by the frontend. To add a new sort, add one class and one line here.
+    private static final ApartmentSortStrategy DEFAULT_SORT = new NewestFirstSort();
+    private static final Map<String, ApartmentSortStrategy> SORT_STRATEGIES = Map.of(
+            "newest", DEFAULT_SORT,
+            "priceAsc", new PriceLowToHighSort(),
+            "priceDesc", new PriceHighToLowSort(),
+            "discount", new BiggestDiscountSort());
 
     private final ApartmentRepository apartmentRepository;
     private final PromotionRepository promotionRepository;
@@ -85,13 +99,11 @@ public class ApartmentQueryService {
             if (c.getMaxPrice() != null) where.add(cb.le(payable, c.getMaxPrice()));
 
             if (query.getResultType() != Long.class && query.getResultType() != long.class) {
-                String sort = c.getSort() == null ? "newest" : c.getSort();
-                switch (sort) {
-                    case "priceAsc" -> query.orderBy(cb.asc(payable), cb.desc(root.get("apartmentId")));
-                    case "priceDesc" -> query.orderBy(cb.desc(payable), cb.desc(root.get("apartmentId")));
-                    case "discount" -> query.orderBy(cb.desc(discount), cb.desc(root.get("apartmentId")));
-                    default -> query.orderBy(cb.desc(root.get("listedDate")), cb.desc(root.get("apartmentId")));
-                }
+                // Strategy pattern: pick the sort strategy for ?sort=..., or "newest" if it is missing/unknown.
+                ApartmentSortStrategy sortStrategy = c.getSort() == null
+                        ? DEFAULT_SORT
+                        : SORT_STRATEGIES.getOrDefault(c.getSort(), DEFAULT_SORT);
+                query.orderBy(sortStrategy.orderBy(cb, root, payable, discount));
             }
             return cb.and(where.toArray(new Predicate[0]));
         };
